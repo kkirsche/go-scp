@@ -54,9 +54,7 @@ func withoutAgentSshConfig(username string, sshKeyFile SshKeyfile) *ssh.ClientCo
 	return config
 }
 
-func ExecuteCommand(sshKeyFile SshKeyfile, sshCredentials SshCredentials, remoteMachine RemoteMachine, usingSshAgent bool) {
-	cmd := "/usr/bin/whoami"
-
+func Connect(sshKeyFile SshKeyfile, sshCredentials SshCredentials, remoteMachine RemoteMachine, usingSshAgent bool) (*ssh.Client, error) {
 	// An SSH client is represented with a ClientConn.
 	//
 	// To authenticate with the remote server you must pass at least one
@@ -69,17 +67,16 @@ func ExecuteCommand(sshKeyFile SshKeyfile, sshCredentials SshCredentials, remote
 	}
 
 	client, err := ssh.Dial("tcp", remoteMachine.Host+":"+remoteMachine.Port, config)
-	if err != nil {
-		log.Print("Failed to dial: " + err.Error())
-		os.Exit(1)
-	}
 
+	return client, err
+}
+
+func ExecuteCommand(client ssh.Client, cmd string) (string, error) {
 	// Each ClientConn can support multiple interactive sessions,
 	// represented by a Session.
 	session, err := client.NewSession()
 	if err != nil {
-		log.Print("Failed to create session: " + err.Error())
-		os.Exit(1)
+		return "", err
 	}
 	defer session.Close()
 
@@ -88,7 +85,8 @@ func ExecuteCommand(sshKeyFile SshKeyfile, sshCredentials SshCredentials, remote
 	var b bytes.Buffer
 	session.Stdout = &b
 	if err := session.Run(cmd); err != nil {
-		panic("Failed to run: " + err.Error())
+		return "", err
 	}
-	fmt.Print(b.String())
+
+	return b.String(), nil
 }
