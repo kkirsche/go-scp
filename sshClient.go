@@ -16,11 +16,10 @@ func getAgent() (agent.Agent, error) {
 	return agent.NewClient(agentConn), err
 }
 
-func withAgentSshConfig(username string) *ssh.ClientConfig {
+func withAgentSshConfig(username string) (*ssh.ClientConfig, error) {
 	agent, err := getAgent()
 	if err != nil {
-		log.Println("Failed to connect to SSH_AUTH_SOCK:", err)
-		os.Exit(1)
+		return &ssh.ClientConfig{}, err
 	}
 	config := &ssh.ClientConfig{
 		User: username,
@@ -28,20 +27,18 @@ func withAgentSshConfig(username string) *ssh.ClientConfig {
 			ssh.PublicKeysCallback(agent.Signers),
 		},
 	}
-	return config
+	return config, nil
 }
 
-func withoutAgentSshConfig(username string, sshKeyFile SshKeyfile) *ssh.ClientConfig {
+func withoutAgentSshConfig(username string, sshKeyFile SshKeyfile) (*ssh.ClientConfig, error) {
 	keyFilePath := fmt.Sprintf("%s/%s", sshKeyFile.Path, sshKeyFile.Filename)
 	keyFileContents, err := ioutil.ReadFile(keyFilePath)
 	if err != nil {
-		log.Print(err)
-		os.Exit(1)
+		return &ssh.ClientConfig{}, err
 	}
 	signer, err := ssh.ParsePrivateKey(keyFileContents)
 	if err != nil {
-		log.Print(err)
-		os.Exit(1)
+		return &ssh.ClientConfig{}, err
 	}
 
 	config := &ssh.ClientConfig{
@@ -51,7 +48,7 @@ func withoutAgentSshConfig(username string, sshKeyFile SshKeyfile) *ssh.ClientCo
 		},
 	}
 
-	return config
+	return config, nil
 }
 
 func Connect(sshKeyFile SshKeyfile, sshCredentials SshCredentials, remoteMachine RemoteMachine, usingSshAgent bool) (*ssh.Client, error) {
@@ -60,10 +57,11 @@ func Connect(sshKeyFile SshKeyfile, sshCredentials SshCredentials, remoteMachine
 	// To authenticate with the remote server you must pass at least one
 	// implementation of AuthMethod via the Auth field in ClientConfig.
 	var config *ssh.ClientConfig
+	var err error
 	if usingSshAgent {
-		config = withAgentSshConfig(sshCredentials.Username)
+		config, err = withAgentSshConfig(sshCredentials.Username)
 	} else {
-		config = withoutAgentSshConfig(sshCredentials.Username, sshKeyFile)
+		config, err = withoutAgentSshConfig(sshCredentials.Username, sshKeyFile)
 	}
 
 	client, err := ssh.Dial("tcp", remoteMachine.Host+":"+remoteMachine.Port, config)
@@ -76,7 +74,7 @@ func ExecuteCommand(client ssh.Client, cmd string) (string, error) {
 	// represented by a Session.
 	session, err := client.NewSession()
 	if err != nil {
-		return "", err
+		log.Fatal("Failed to create session: " + err.Error())
 	}
 	defer session.Close()
 
