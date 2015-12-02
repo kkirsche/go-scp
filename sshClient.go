@@ -11,6 +11,10 @@ import (
 	"os"
 )
 
+const (
+	VERSION = "0.0.1"
+)
+
 func getAgent() (agent.Agent, error) {
 	agentConn, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 	return agent.NewClient(agentConn), err
@@ -69,7 +73,7 @@ func Connect(sshKeyFile SshKeyfile, sshCredentials SshCredentials, remoteMachine
 	return client, err
 }
 
-func ExecuteCommand(client ssh.Client, cmd string) (string, error) {
+func ExecuteCommand(client *ssh.Client, cmd string) (string, error) {
 	// Each ClientConn can support multiple interactive sessions,
 	// represented by a Session.
 	session, err := client.NewSession()
@@ -87,4 +91,31 @@ func ExecuteCommand(client ssh.Client, cmd string) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+func CopyLocalFileToRemote(client *ssh.Client, localFilePath string, filename string) error {
+	// Each ClientConn can support multiple interactive sessions,
+	// represented by a Session.
+	session, err := client.NewSession()
+	if err != nil {
+		log.Fatal("Failed to create session: " + err.Error())
+	}
+	defer session.Close()
+
+	writer, err := session.StdinPipe()
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+
+	go func() {
+		fileContents, _ := ioutil.ReadFile(localFilePath + "/" + filename)
+		content := string(fileContents)
+		fmt.Fprintln(writer, "C0644", len(content), filename)
+		fmt.Fprint(writer, content)
+		fmt.Fprintln(writer, "\x00") // transfer end with \x00\
+	}()
+
+	session.Run("/usr/bin/scp -t ./")
+	return nil
 }
