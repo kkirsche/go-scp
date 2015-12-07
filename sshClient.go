@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -91,6 +92,45 @@ func ExecuteCommand(client *ssh.Client, cmd string) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, filename string) error {
+	// Each ClientConn can support multiple interactive sessions,
+	// represented by a Session.
+	session, err := client.NewSession()
+	if err != nil {
+		log.Fatal("Failed to create session: " + err.Error())
+	}
+	defer session.Close()
+
+	writer, err := session.StdinPipe()
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+
+	reader, err := session.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	go func(writer io.WriteCloser, reader io.Reader) {
+		writer.Write([]byte{0})
+		scpCommandArray := make([]byte, 40)
+		_, err := reader.Read(scpCommandArray)
+		log.Print(string(scpCommandArray))
+		if err != nil {
+			if err == io.EOF {
+				//no problem.
+			} else {
+				log.Fatalf("Error reading standard input: %s", err.Error())
+			}
+		}
+	}(writer, reader)
+
+	log.Print("Attempting: /usr/bin/scp -f " + remoteFilePath + "/" + filename)
+	session.Run("/usr/bin/scp -f " + remoteFilePath + "/" + filename)
+	return nil
 }
 
 func CopyLocalFileToRemote(client *ssh.Client, localFilePath string, filename string) error {
