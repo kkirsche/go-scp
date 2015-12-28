@@ -145,7 +145,7 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFile
 		// Confirm to the remote host that we have received the command line
 		writer.Write(successfulByte)
 		// Now we want to start receiving the file itself from the remote machine
-		fileContents := make([]byte, 100)
+		fileContents := make([]byte, 1)
 		var file *os.File
 		if localFileName == "" {
 			file = createNewFile(localFilePath + "/" + fileName)
