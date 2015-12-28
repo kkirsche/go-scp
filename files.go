@@ -1,9 +1,9 @@
 package goScp
 
 import (
+	"log"
 	"os"
 	"strings"
-	"log"
 )
 
 func createNewFile(filename string) *os.File {
