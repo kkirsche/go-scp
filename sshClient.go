@@ -95,7 +95,7 @@ func ExecuteCommand(client *ssh.Client, cmd string) (string, error) {
 	return b.String(), nil
 }
 
-func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFilename string, localFilePath string) error {
+func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFilename string, localFilePath string, localFileName string) error {
 	// Each ClientConn can support multiple interactive sessions,
 	// represented by a Session.
 	session, err := client.NewSession()
@@ -146,7 +146,12 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFile
 		writer.Write(successfulByte)
 		// Now we want to start receiving the file itself from the remote machine
 		fileContents := make([]byte, 100)
-		file := createNewFile(localFilePath + "/" + fileName)
+		var file *os.File
+		if localFileName == "" {
+			file = createNewFile(localFilePath + "/" + fileName)
+		} else {
+			file = createNewFile(localFilePath + "/" + localFileName)
+		}
 		more := true
 		for more {
 			bytes_read, err = reader.Read(fileContents)
