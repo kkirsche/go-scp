@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 )
 
 const (
@@ -94,7 +95,7 @@ func ExecuteCommand(client *ssh.Client, cmd string) (string, error) {
 	return b.String(), nil
 }
 
-func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, filename string) error {
+func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFilename string, localFilePath string) error {
 	// Each ClientConn can support multiple interactive sessions,
 	// represented by a Session.
 	session, err := client.NewSession()
@@ -116,11 +117,14 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, filename s
 	doneChannel := make(chan bool)
 
 	go func(writer io.WriteCloser, reader io.Reader, doneChannel chan bool) {
-		writer.Write([]byte{0})
-		// Length of
+		successfulByte := []byte{0}
+
+		// Send a null byte saying that we are ready to receive the data
+		writer.Write(successfulByte)
+		// We want to first receive the command input from remote machine
+		// e.g. C0644 113828 test.csv
 		scpCommandArray := make([]byte, 100)
 		bytes_read, err := reader.Read(scpCommandArray)
-		log.Print(string(scpCommandArray[:bytes_read]))
 		if err != nil {
 			if err == io.EOF {
 				//no problem.
@@ -129,12 +133,23 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, filename s
 			}
 		}
 
-		writer.Write([]byte{0})
+		scpStartLine := string(scpCommandArray[:bytes_read])
+		scpStartLineArray := strings.Split(scpStartLine, " ")
+
+		filePermission := scpStartLineArray[0][1:]
+		fileSize := scpStartLineArray[1]
+		fileName := scpStartLineArray[2]
+
+		log.Printf("File with permissions: %s, File Size: %s, File Name: %s", filePermission, fileSize, fileName)
+
+		// Confirm to the remote host that we have received the command line
+		writer.Write(successfulByte)
+		// Now we want to start receiving the file itself from the remote machine
 		fileContents := make([]byte, 100)
+		file := createNewFile(localFilePath + "/" + fileName)
 		more := true
 		for more {
 			bytes_read, err = reader.Read(fileContents)
-			// log.Print(string(fileContents[:bytes_read]))
 			if err != nil {
 				if err == io.EOF {
 					more = false
@@ -142,13 +157,17 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, filename s
 					log.Fatalf("Error reading standard input: %s", err.Error())
 				}
 			}
-			writer.Write([]byte{0})
+			writeParitalToFile(file, fileContents[:bytes_read])
+			writer.Write(successfulByte)
+		}
+		err = file.Sync()
+		if err != nil {
+			log.Fatal(err)
 		}
 		doneChannel <- true
 	}(writer, reader, doneChannel)
 
-	log.Print("Attempting: /usr/bin/scp -f " + remoteFilePath + "/" + filename)
-	session.Run("/usr/bin/scp -f " + remoteFilePath + "/" + filename)
+	session.Run("/usr/bin/scp -f " + remoteFilePath + "/" + remoteFilename)
 	<-doneChannel
 	writer.Close()
 	return nil
