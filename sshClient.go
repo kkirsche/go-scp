@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 )
 
 const (
@@ -114,9 +115,10 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFile
 		return err
 	}
 
-	doneChannel := make(chan bool)
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-	go func(writer io.WriteCloser, reader io.Reader, doneChannel chan bool) {
+	go func(writer io.WriteCloser, reader io.Reader, wg *sync.WaitGroup) {
 		successfulByte := []byte{0}
 
 		// Send a null byte saying that we are ready to receive the data
@@ -169,11 +171,11 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFile
 		if err != nil {
 			log.Fatal(err)
 		}
-		doneChannel <- true
-	}(writer, reader, doneChannel)
+		wg.Done()
+	}(writer, reader, &wg)
 
 	session.Run("/usr/bin/scp -f " + remoteFilePath + "/" + remoteFilename)
-	<-doneChannel
+	wg.Wait()
 	writer.Close()
 	return nil
 }
