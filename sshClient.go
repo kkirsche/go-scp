@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	VERSION = "0.0.1"
+	// VERSION represents the current software version of goScp
+	VERSION = "0.0.2"
 )
 
 func getAgent() (agent.Agent, error) {
@@ -23,7 +24,7 @@ func getAgent() (agent.Agent, error) {
 	return agent.NewClient(agentConn), err
 }
 
-func withAgentSshConfig(username string) (*ssh.ClientConfig, error) {
+func withAgentSSHConfig(username string) (*ssh.ClientConfig, error) {
 	agent, err := getAgent()
 	if err != nil {
 		return &ssh.ClientConfig{}, err
@@ -37,7 +38,7 @@ func withAgentSshConfig(username string) (*ssh.ClientConfig, error) {
 	return config, nil
 }
 
-func withoutAgentSshConfig(username string, sshKeyFile SshKeyfile) (*ssh.ClientConfig, error) {
+func withoutAgentSSHConfig(username string, sshKeyFile SSHKeyfile) (*ssh.ClientConfig, error) {
 	keyFilePath := fmt.Sprintf("%s/%s", sshKeyFile.Path, sshKeyFile.Filename)
 	keyFileContents, err := ioutil.ReadFile(keyFilePath)
 	if err != nil {
@@ -58,17 +59,18 @@ func withoutAgentSshConfig(username string, sshKeyFile SshKeyfile) (*ssh.ClientC
 	return config, nil
 }
 
-func Connect(sshKeyFile SshKeyfile, sshCredentials SshCredentials, remoteMachine RemoteMachine, usingSshAgent bool) (*ssh.Client, error) {
+// Connect creates an SSH Client connection to the remote host
+func Connect(sshKeyFile SSHKeyfile, sshCredentials SSHCredentials, remoteMachine RemoteHost, usingSSHAgent bool) (*ssh.Client, error) {
 	// An SSH client is represented with a ClientConn.
 	//
 	// To authenticate with the remote server you must pass at least one
 	// implementation of AuthMethod via the Auth field in ClientConfig.
 	var config *ssh.ClientConfig
 	var err error
-	if usingSshAgent {
-		config, err = withAgentSshConfig(sshCredentials.Username)
+	if usingSSHAgent {
+		config, err = withAgentSSHConfig(sshCredentials.Username)
 	} else {
-		config, err = withoutAgentSshConfig(sshCredentials.Username, sshKeyFile)
+		config, err = withoutAgentSSHConfig(sshCredentials.Username, sshKeyFile)
 	}
 
 	client, err := ssh.Dial("tcp", remoteMachine.Host+":"+remoteMachine.Port, config)
@@ -126,7 +128,7 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFile
 		// We want to first receive the command input from remote machine
 		// e.g. C0644 113828 test.csv
 		scpCommandArray := make([]byte, 100)
-		bytes_read, err := reader.Read(scpCommandArray)
+		bytesRead, err := reader.Read(scpCommandArray)
 		if err != nil {
 			if err == io.EOF {
 				//no problem.
@@ -135,7 +137,7 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFile
 			}
 		}
 
-		scpStartLine := string(scpCommandArray[:bytes_read])
+		scpStartLine := string(scpCommandArray[:bytesRead])
 		scpStartLineArray := strings.Split(scpStartLine, " ")
 
 		filePermission := scpStartLineArray[0][1:]
@@ -156,7 +158,7 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFile
 		}
 		more := true
 		for more {
-			bytes_read, err = reader.Read(fileContents)
+			bytesRead, err = reader.Read(fileContents)
 			if err != nil {
 				if err == io.EOF {
 					more = false
@@ -164,7 +166,7 @@ func CopyRemoteFileToLocal(client *ssh.Client, remoteFilePath string, remoteFile
 					log.Fatalf("Error reading standard input: %s", err.Error())
 				}
 			}
-			writeParitalToFile(file, fileContents[:bytes_read])
+			writeParitalToFile(file, fileContents[:bytesRead])
 			writer.Write(successfulByte)
 		}
 		err = file.Sync()
