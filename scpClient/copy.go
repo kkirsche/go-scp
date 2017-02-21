@@ -65,11 +65,11 @@ func (c *Client) SendFileToRemote(fp string) error {
 	sc.wg.Add(1)
 	go sc.FileSource(fp)
 	logrus.Infoln("Beginning transfer")
-	s.Run("/usr/bin/scp -t ./")
+	go s.Run("/usr/bin/scp -t ./")
+	logrus.Debugln("Waiting for transfer to complete...")
+	sc.wg.Wait()
 	for err := range sc.errors {
 		logrus.WithError(err).Errorln("Error sending the file")
 	}
-	logrus.Debugln("Waiting")
-	sc.wg.Wait()
 	return nil
 }

@@ -1,7 +1,6 @@
 package scpClient
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -131,6 +130,7 @@ func (c *SessionClient) FileSink(fp, fn string) {
 // FileSource allows us to acting as the machine sending a file to the remote host
 func (c *SessionClient) FileSource(p string) {
 	startByte := []byte{0}
+	response := make([]byte, 1)
 	defer close(c.errors)
 	defer c.wg.Done()
 
@@ -157,51 +157,36 @@ func (c *SessionClient) FileSource(p string) {
 		"size":              i.Size(),
 	}).Debugln("File information retrieved")
 
-	pa := strings.Split(p, " ")
-	begin := []byte(fmt.Sprintf("%s %d %s", "C0644", i.Size(), pa[len(pa)-1]))
+	begin := []byte(fmt.Sprintf("C%#o %d %s\n", i.Mode(), i.Size(), i.Name()))
 	logrus.WithField("statement", string(begin)).Debugln("Beginning transfer")
-	c.writer.Write(begin)
-	c.writer.Write(startByte)
-	ready := make([]byte, 1)
-	_, err = c.reader.Read(ready)
+	_, err = c.writer.Write(begin)
 	if err != nil {
 		c.errors <- err
 		return
 	}
-	logrus.WithField("response", ready).Debugln("Ready to begin transfer")
-	r := bufio.NewReader(f)
-	logrus.Debugln("Beginning to read file")
 
-fileLoop:
-	for err != io.EOF {
-		b, err := r.ReadBytes('\n')
-		logrus.WithField("line", string(b)).Debugln("Read line")
-		if err == io.EOF {
-			logrus.WithError(err).Debugln("EOF found")
-			break fileLoop
-		} else if err != nil {
-			logrus.WithError(err).Debugln("Error occurred in fileloop")
-			c.errors <- err
-			return
-		}
-		if len(b) > 0 {
-			w, err := c.writer.Write(b)
-			if err != nil {
-				c.errors <- err
-				return
-			}
-
-			logrus.WithField("bytes", w).Debugf("Wrote %d bytes", w)
-			rcvd := make([]byte, 1)
-			_, err = c.reader.Read(rcvd)
-			if err != nil {
-				logrus.WithError(err).Debugln("Error getting response")
-			}
-			logrus.WithField("response", rcvd).Debugln("Recieved response")
-		}
+	c.reader.Read(response)
+	if err != nil {
+		c.errors <- err
+		return
 	}
+	logrus.WithField("response", response).Debugln("Response to transfer request")
+
+	logrus.WithField("response", response).Debugln("Ready to start data transfer")
+	c.writer.Write(startByte)
+
+	io.Copy(c.writer, f)
+	fmt.Fprint(c.writer, "\n\n\n\n\n")
+	logrus.Debugln("Sending complete notice")
+	fmt.Fprint(c.writer, "\x00")
+
+	logrus.Debugln("Waiting for acceptence of termination")
+	_, err = c.reader.Read(response)
+	if err != nil {
+		c.errors <- err
+		return
+	}
+	logrus.WithField("response", response).Debugln("Data transfer response")
 
 	logrus.Debugln("Transfer complete")
-	c.writer.Write([]byte("\x00")) // transfer end with \x00\
-	return
 }
