@@ -176,7 +176,7 @@ func (c *SessionClient) FileSource(p string) {
 	c.writer.Write(startByte)
 
 	io.Copy(c.writer, f)
-	fmt.Fprint(c.writer, "\n\n\n\n\n")
+
 	logrus.Debugln("Sending complete notice")
 	fmt.Fprint(c.writer, "\x00")
 
