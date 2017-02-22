@@ -15,14 +15,10 @@
 package cmd
 
 import (
-	"os"
 	"os/user"
-	"path"
-	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kkirsche/go-scp/scpAuth"
-	"github.com/kkirsche/go-scp/scpClient"
+	"github.com/kkirsche/go-scp/libscp"
 	"github.com/spf13/cobra"
 )
 
@@ -47,28 +43,7 @@ var sendCmd = &cobra.Command{
 		}
 
 		for _, arg := range args {
-			res := strings.Split(arg, ":")
-			fname := res[1]
-
-			if !path.IsAbs(fname) {
-				wd, err := os.Getwd()
-				if err != nil {
-					logrus.WithError(err).Errorln("Failed to get current directory")
-				}
-				fname = path.Clean(path.Join(wd, fname))
-			}
-
-			creds := scpAuth.NewCredentials(username, "")
-			a := scpClient.NewAgentClient(res[0], port, creds)
-			err := a.SendFileToRemote(fname)
-			if err != nil {
-				logrus.WithError(err).WithFields(logrus.Fields{
-					"address":  addr,
-					"port":     port,
-					"file":     fp,
-					"username": username,
-				}).Errorln("Failed to send file to host")
-			}
+			libscp.SendFileWithAgent(username, arg, port)
 		}
 	},
 }
