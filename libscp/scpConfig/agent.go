@@ -1,7 +1,7 @@
 package scpConfig
 
 import (
-	"github.com/kkirsche/go-scp/scpAgent"
+	"github.com/kkirsche/go-scp/libscp/scpAgent"
 	"golang.org/x/crypto/ssh"
 )
 

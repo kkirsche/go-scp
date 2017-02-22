@@ -3,7 +3,7 @@ package scpConfig
 import (
 	"io/ioutil"
 
-	"github.com/kkirsche/go-scp/scpAuth"
+	"github.com/kkirsche/go-scp/libscp/scpAuth"
 	"golang.org/x/crypto/ssh"
 )
 

@@ -4,9 +4,9 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kkirsche/go-scp/scpAuth"
-	"github.com/kkirsche/go-scp/scpClient"
-	"github.com/kkirsche/go-scp/scpFile"
+	"github.com/kkirsche/go-scp/libscp/scpAuth"
+	"github.com/kkirsche/go-scp/libscp/scpClient"
+	"github.com/kkirsche/go-scp/libscp/scpFile"
 )
 
 func SendFileWithAgent(username, arg, port string) (logrus.Fields, error) {

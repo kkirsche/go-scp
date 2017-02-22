@@ -3,8 +3,8 @@ package scpClient
 import (
 	"net"
 
-	"github.com/kkirsche/go-scp/scpAuth"
-	"github.com/kkirsche/go-scp/scpConfig"
+	"github.com/kkirsche/go-scp/libscp/scpAuth"
+	"github.com/kkirsche/go-scp/libscp/scpConfig"
 	"golang.org/x/crypto/ssh"
 )
 
