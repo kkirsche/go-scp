@@ -129,7 +129,6 @@ func (c *SessionClient) FileSink(fp, fn string) {
 
 // FileSource allows us to acting as the machine sending a file to the remote host
 func (c *SessionClient) FileSource(p string) {
-	startByte := []byte{0}
 	response := make([]byte, 1)
 	defer close(c.errors)
 	defer c.wg.Done()
@@ -173,7 +172,6 @@ func (c *SessionClient) FileSource(p string) {
 	logrus.WithField("response", response).Debugln("Response to transfer request")
 
 	logrus.WithField("response", response).Debugln("Ready to start data transfer")
-	c.writer.Write(startByte)
 
 	io.Copy(c.writer, f)
 
