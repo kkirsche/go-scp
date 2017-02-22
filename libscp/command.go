@@ -1,4 +1,4 @@
-package scpClient
+package libscp
 
 import "bytes"
 

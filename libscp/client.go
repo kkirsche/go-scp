@@ -1,10 +1,8 @@
-package scpClient
+package libscp
 
 import (
 	"net"
 
-	"github.com/kkirsche/go-scp/libscp/scpAuth"
-	"github.com/kkirsche/go-scp/libscp/scpConfig"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -14,14 +12,14 @@ type Client struct {
 	addr        string
 	port        string
 	useAgent    bool
-	key         *scpAuth.Key
-	credentials *scpAuth.Credentials
+	key         *Key
+	credentials *Credentials
 	client      *ssh.Client
 }
 
 // NewAgentClient creates a new host object that will connect using the SSH
 // Agent signers
-func NewAgentClient(addr, port string, creds *scpAuth.Credentials) *Client {
+func NewAgentClient(addr, port string, creds *Credentials) *Client {
 	return &Client{
 		addr:        addr,
 		port:        port,
@@ -32,7 +30,7 @@ func NewAgentClient(addr, port string, creds *scpAuth.Credentials) *Client {
 
 // NewKeyClient creates a new host object that will connect using the SSH
 // Agent signers
-func NewKeyClient(addr, port string, creds *scpAuth.Credentials, key *scpAuth.Key) *Client {
+func NewKeyClient(addr, port string, creds *Credentials, key *Key) *Client {
 	return &Client{
 		addr:        addr,
 		port:        port,
@@ -52,12 +50,12 @@ func (c *Client) Connect() error {
 	var err error
 
 	if c.useAgent {
-		co, err = scpConfig.Agent(c.credentials.Username)
+		co, err = AgentConfig(c.credentials.Username)
 		if err != nil {
 			return err
 		}
 	} else {
-		co, err = scpConfig.Key(c.credentials.Username, c.key)
+		co, err = KeyConfig(c.credentials.Username, c.key)
 		if err != nil {
 			return err
 		}

@@ -1,4 +1,4 @@
-package scpAuth
+package libscp
 
 // Credentials are the SSH credentials that should be used to connect to the
 // remote host. This is for use with the SSH Agent.
