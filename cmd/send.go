@@ -43,7 +43,10 @@ var sendCmd = &cobra.Command{
 		}
 
 		for _, arg := range args {
-			libscp.SendFileWithAgent(username, arg, port)
+			fields, err := libscp.SendFileWithAgent(username, arg, port)
+			if err != nil {
+				logrus.WithFields(fields).WithError(err).Errorln("Failed to transfer file to the remote host")
+			}
 		}
 	},
 }
