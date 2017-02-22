@@ -15,7 +15,10 @@
 package cmd
 
 import (
+	"os"
 	"os/user"
+	"path"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kkirsche/go-scp/scpAuth"
@@ -29,30 +32,43 @@ var (
 	username,
 	password,
 	fp string
+	verbose bool
 )
 
 // sendCmd represents the send command
 var sendCmd = &cobra.Command{
 	Use:   "send",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Send a file from the local machine to a remote machine",
+	Long:  `Use to send a file from the local host to a remote host`,
 	Run: func(cmd *cobra.Command, args []string) {
-		logrus.SetLevel(logrus.DebugLevel)
-		creds := scpAuth.NewCredentials(username, "")
-		a := scpClient.NewAgentClient(addr, port, creds)
-		err := a.SendFileToRemote(fp)
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"address":  addr,
-				"port":     port,
-				"file":     fp,
-				"username": username,
-			}).Errorln("Failed to send file to host")
+		logrus.SetLevel(logrus.InfoLevel)
+		if verbose {
+			logrus.SetLevel(logrus.DebugLevel)
+		}
+
+		for _, arg := range args {
+			res := strings.Split(arg, ":")
+			fname := res[1]
+
+			if !path.IsAbs(fname) {
+				wd, err := os.Getwd()
+				if err != nil {
+					logrus.WithError(err).Errorln("Failed to get current directory")
+				}
+				fname = path.Clean(path.Join(wd, fname))
+			}
+
+			creds := scpAuth.NewCredentials(username, "")
+			a := scpClient.NewAgentClient(res[0], port, creds)
+			err := a.SendFileToRemote(fname)
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"address":  addr,
+					"port":     port,
+					"file":     fp,
+					"username": username,
+				}).Errorln("Failed to send file to host")
+			}
 		}
 	},
 }
@@ -65,8 +81,7 @@ func init() {
 		logrus.WithError(err).Errorln("Failed to get current user")
 	}
 
-	sendCmd.PersistentFlags().StringVarP(&addr, "address", "a", "", "The remote IP address to send to")
 	sendCmd.PersistentFlags().StringVarP(&port, "port", "p", "22", "The port to connect to the remote host on")
-	sendCmd.PersistentFlags().StringVarP(&fp, "filepath", "f", "", "The path to the file to send")
 	sendCmd.PersistentFlags().StringVarP(&username, "username", "u", u.Username, "The username to connect to the remote host with")
+	sendCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose mode")
 }
