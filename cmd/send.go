@@ -17,8 +17,8 @@ package cmd
 import (
 	"os/user"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/kkirsche/go-scp/libscp"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 

@@ -3,10 +3,12 @@ package libscp
 import (
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/kkirsche/go-scp/libscp/scpFile"
+	"github.com/sirupsen/logrus"
 )
 
+// SendFileWithAgent is used to send a file's contents while using ssh agent
+// for retrieving the necessary username information
 func SendFileWithAgent(username, arg, port string) (logrus.Fields, error) {
 	res := strings.Split(arg, ":")
 	fname := res[1]

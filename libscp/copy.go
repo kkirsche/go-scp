@@ -1,6 +1,6 @@
 package libscp
 
-import "github.com/Sirupsen/logrus"
+import "github.com/sirupsen/logrus"
 
 // ReceiveFileFromRemote is used to receive a file using the SCP protocol from a
 // remote host / machine

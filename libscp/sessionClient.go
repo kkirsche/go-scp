@@ -7,9 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/kkirsche/go-scp/libscp/scpFile"
-
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
