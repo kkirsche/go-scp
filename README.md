@@ -1,2 +1,3 @@
-# go-scp
-Golang based SSH/SCP Library
+Archived in favor of the cleaner, and more correct
+
+https://github.com/kkirsche/gscp
